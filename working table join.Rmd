@@ -115,9 +115,9 @@ What are the top copper projects proven and probable?
 
 ```{r}
 
-topcopperpp <- resprov5 %>% dplyr::filter(Classification=="Proven and Probable") %>% dplyr::filter(Commodity=="Gold") %>% dplyr::top_n(20, ContainedMetal)
+exp <- resprov5 %>% dplyr::filter(Classification=="Measured and Indicated") %>% dplyr::filter(Commodity=="Cobalt") %>% group_by(Country, ContainedMetal) %>% summarize()
 
-
+exp
 
 
 
@@ -129,8 +129,9 @@ Let's plot
 
 ```{r}
 
-ggplot(topcopperpp, aes(x=reorder(companyproperty,ContainedMetal), y=ContainedMetal)) +
+ggplot(topcopperpp, aes(x=reorder(Country,ContainedMetal), y=ContainedMetal)) +
   geom_bar(stat="identity") +
+  geom_text(aes(label=ContainedMetal))+
   coord_flip()
  
 
@@ -140,128 +141,3 @@ ggplot(topcopperpp, aes(x=reorder(companyproperty,ContainedMetal), y=ContainedMe
 
 
 
-
-
-
-
-
-
-
-////////////////////////COPIED OVER CODE FROM VERSION ONE
-
-
-Let's count. 
-
-How many Proven and Probable projects are there by commodities? 
-
-
-```{r}
-
-countcom <- resraw %>% filter(Classification=="Proven and Probable") %>% count(Commodity) %>% arrange(desc(n))
-
-countcom
-
-
-```
-
-
-
-
-What is the total Contained Metal Proven and Probable by commodities? 
-
-Use ContainedMetalUnits filter to get gold, base metal and other. 
-
-```{r}
-
-totalcom <- resraw %>% filter(Classification=="Proven and Probable") %>% filter(ContainedMetalUnits=="ozt") %>% group_by(Commodity) %>% summarise(TotalCommodity=sum(ContainedMetal)) %>% arrange(desc(TotalCommodity))
-
-totalcom
-
-
-
-```
-
-
-
-Let's get the top 10 properties by commodity group for just Proven and Probable and precious. 
-
-```{r}
-
-prove20 <- resraw %>% filter(Classification=="Proven and Probable") %>% filter(ContainedMetalUnits=="ozt") %>% select(Property, Commodity, ContainedMetal) %>% group_by(Commodity) %>% top_n(10, ContainedMetal)
-
-View(prove20)
-
-
-
-```
-
-Let's chart
-
-
-```{r}
-
-ggplot(prove20, aes(x=Property, y=ContainedMetal)) +
-  geom_bar(stat="identity") +
-  coord_flip()+
-  facet_wrap(~Commodity, scales="free")
-
-
-```
-
-
-I would like to order facets by descending order. I will use instructions at https://drsimonj.svbtle.com/ordering-categories-within-ggplot2-facets
-
-```{r}
-
-
-###ozt for precious
-precious10 <- resraw %>% filter(Classification=="Proven and Probable") %>% filter(ContainedMetalUnits=="ozt") %>% select(Property, Commodity, ContainedMetal)  %>% group_by(Commodity) %>% top_n(10, ContainedMetal) %>% ungroup() %>% arrange(Commodity, ContainedMetal) %>% mutate(order=row_number())
-
-precious10
-###t for everything else
-base10 <- resraw %>% filter(Classification=="Proven and Probable") %>% filter(ContainedMetalUnits=="t") %>% select(Property, Commodity, ContainedMetal)  %>% group_by(Commodity) %>% top_n(10, ContainedMetal) %>% ungroup() %>% arrange(Commodity, ContainedMetal) %>% mutate(order=row_number())
-
-base10
-
-
-
-```
-
-
-Try faceting again with orders. This is precious 
-
-```{r}
-
-ggplot(precious10, aes(x=order, y=ContainedMetal)) +
-  geom_bar(stat="identity") +
-  facet_wrap(~Commodity, scales="free") +
-# Add categories to axis
-  scale_x_continuous(
-    breaks = precious10$order,
-    labels = precious10$Property,
-    expand = c(0,0)
-  ) +
-  coord_flip()
-
-```
-
-
-
-
-
-Try faceting again with orders. This is base 
-
-```{r}
-
-ggplot(base10, aes(x=order, y=ContainedMetal)) +
-  geom_bar(stat="identity") +
-  facet_wrap(~Commodity, scales="free") +
-# Add categories to axis
-  scale_x_continuous(
-    breaks = base10$order,
-    labels = base10$Property,
-    expand = c(0,0)
-  ) +
-  coord_flip()
-
-```
