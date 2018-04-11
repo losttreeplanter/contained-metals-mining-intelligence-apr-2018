@@ -1,0 +1,105 @@
+---
+title: "Nickel MI Bubble Map Country"
+output: html_notebook
+---
+
+
+
+
+
+```{r}
+library(leaflet)
+library(tidyverse)
+
+countrycode <- country.code.lat.lon
+countrycode
+nickelcountrymi
+
+
+
+
+```
+
+
+Let's correctly format countrycode data frame
+
+```{r}
+
+countrycodebetter <- countrycode %>% rename(c("V2"="Country", "V3"="Latitude", "V4"="Longtitude")) 
+countrycodebetter2 <- countrycodebetter[-1,]
+countrycodebetter3 <- countrycodebetter[,-1]
+countrycodebetter3
+
+
+countrycodebetter4 <- countrycodebetter3[-1,]
+countrycodebetter4
+
+#now parse
+
+countrycodebetter4$Latitude <- parse_number(countrycodebetter4$Latitude)
+countrycodebetter4$Longtitude <- parse_number(countrycodebetter4$Longtitude)
+
+countrycodebetter4$Country <- parse_character(countrycodebetter4$Country)
+
+countrycodebetter4
+
+```
+
+
+
+Now let's join
+
+```{r}
+
+countrymijoin <- nickelcountrymi %>% left_join(countrycodebetter4)
+
+View(countrymijoin)
+
+countrymijoin[1,"Longtitude"] =100
+
+countrymijoin
+
+```
+
+
+Let's add leaflet bubble chart
+
+```{r}
+
+library(leaflet)
+library(leaflet.minicharts)
+
+
+
+leaflet(countrymijoin) %>% addTiles() %>%
+  addCircles(lng = ~Longtitude, lat = ~Latitude, weight = 1,
+    radius = ~sqrt(n) * 300, popup = ~n) 
+
+
+
+```
+
+
+Let's add minileaflet bubble chart
+
+```{r}
+
+library(leaflet)
+library(leaflet.minicharts)
+
+
+
+basemap <- leaflet(countrymijoin) %>% addTiles() 
+
+basemap %>%
+  addMinicharts(
+    countrymijoin$Longtitude, countrymijoin$Latitude,
+    chartdata = countrymijoin$n,
+    showLabels = TRUE,
+    width = 125
+  )
+
+
+
+
+```
