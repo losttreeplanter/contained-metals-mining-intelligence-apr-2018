@@ -1,0 +1,254 @@
+---
+title: "Contained Metals"
+output: html_notebook
+---
+
+Counting down the mines with the most metal. 
+
+Using Mining Intelligences tab on Reserves/Resources: http://data.miningintelligence.com/property/browsesearch.aspx?vt=56
+
+Questions to answer: 
+
+-By metal, what mines have the most proven&probable and measured&indicated? 
+-What are the stages of these projects? 
+-Who owns them? 
+-Out of the top ten, what portion of metal do them contain? 
+-What geo region are the metals? 
+
+Adding other data.frames for ownership and location. 
+
+
+
+```{r}
+
+library(tidyverse)
+
+resraw <- read_csv("C:/Users/Admin/Downloads/resources-report-michael-mccrae-20180409110926 contained metals apr 2018 no ampersand.csv")
+View(resraw)
+
+overviewraw <- read_csv("C:/Users/Admin/Downloads/properties-overview-report-michael-mccrae-20180409140956 overview property.csv")
+overviewraw
+
+ownershipraw <- read_csv("C:/Users/Admin/Downloads/properties-ownership-report-michael-mccrae-20180409141032 ownership.csv")
+ownershipraw
+
+
+```
+
+
+Since left_join is killing me, I am going to try plyr's join. 
+
+
+```{r}
+
+library(plyr)
+
+resprov3 <- join(resraw, overviewraw, type="left", match="first")
+
+resprov4 <- join(resprov3, ownershipraw, type="left", match="first")
+
+View(resprov4)
+
+
+
+
+
+```
+
+
+Check if this worked out. Let's count number of projects by commodity with PandP classification. 
+
+```{r}
+
+countcom3 <- resprov4 %>% filter(Classification=="Proven and Probable") %>% dplyr::count(Commodity) %>% arrange(desc(n))
+
+countcom3
+
+
+```
+
+How about total of copper tonnes? 
+
+```{r}
+
+coppertotal3 <- resprov4 %>% dplyr::filter(Classification=="Proven and Probable") %>% dplyr::filter(Commodity=="Copper") %>% summarise(TotalCommodity=sum(ContainedMetal))
+
+coppertotal3
+
+```
+
+
+
+Now, compare to unaltered data set. 
+
+
+```{r}
+
+countcom11 <- resraw %>% filter(Classification=="Proven and Probable") %>% dplyr::count(Commodity) %>% arrange(desc(n))
+
+countcom11
+
+coppertotal11 <- resraw %>% dplyr::filter(Classification=="Proven and Probable") %>% dplyr::filter(Commodity=="Copper") %>% summarise(TotalCommodity=sum(ContainedMetal))
+
+coppertotal11
+
+
+```
+
+
+Let's add a column with company and property
+
+
+```{r}
+
+resprov5 <- resprov4 %>% unite(companyproperty, c(Company,Property), sep="'s ", remove=FALSE)
+
+resprov5
+
+```
+
+
+
+K. Now let's play with this DATA SET!
+
+What are the top nickel projects measured and indicated?
+
+```{r}
+
+nickelcountmi <- resprov5 %>% dplyr::filter(Classification=="Measured and Indicated") %>% dplyr::filter(Commodity=="Nickel") %>% dplyr::arrange(desc(ContainedMetal)) %>% select(Company, Property, Country, Province, ActivityStatus, ContainedMetal) 
+
+View(nickelcountmi)
+
+write.table(x = nickelcountmi, file = "nickel3.csv", sep=",")
+
+
+
+
+```
+
+
+
+
+What are the top nickel projects proven and probable?
+
+```{r}
+
+nickelcountpp <- resprov5 %>% dplyr::filter(Classification=="Proven and Probable") %>% dplyr::filter(Commodity=="Nickel") %>% dplyr::arrange(desc(ContainedMetal)) %>% select(Company, Property, Country, Province, ActivityStatus, ContainedMetal) 
+
+View(nickelcountpp)
+
+
+
+
+```
+
+
+
+What is the sum of total nickel measured and indicated? 
+
+```{r}
+
+nickelsummeasured <- resprov5 %>% dplyr::filter(Classification=="Measured and Indicated") %>% dplyr::filter(Commodity=="Nickel") %>% tally(ContainedMetal) 
+
+nickelsummeasured
+
+```
+
+
+
+What is the sum of total nickel proven and probable? 
+
+```{r}
+
+nickelsumpp <- resprov5 %>% dplyr::filter(Classification=="Proven and Probable") %>% dplyr::filter(Commodity=="Nickel") %>% tally(ContainedMetal) 
+
+nickelsumpp
+
+```
+
+What is nickel measured and indicated by country? 
+
+```{r}
+
+nickelcountrymi <- resprov5 %>% dplyr::filter(Classification=="Measured and Indicated") %>% dplyr::filter(Commodity=="Nickel") %>% group_by(Country) %>% tally(ContainedMetal) %>% arrange(desc(n))
+
+View(nickelcountrymi)
+
+
+```
+
+
+What is nickel proven and probable by country?
+
+
+```{r}
+
+nickelcountrypp <- resprov5 %>% dplyr::filter(Classification=="Proven and Probable") %>% dplyr::filter(Commodity=="Nickel") %>% group_by(Country) %>% tally(ContainedMetal) %>% arrange(desc(n))
+
+nickelcountrypp
+
+
+```
+
+
+
+K. Let's chart. Let's PP and MI on the same data frame. 
+
+
+
+```{r}
+
+nickelmipp <- resprov5 %>% dplyr::filter(Classification=="Measured and Indicated"|Classification=="Proven and Probable") %>% dplyr::filter(Commodity=="Nickel") %>% dplyr::arrange(desc(ContainedMetal)) %>% select(Company, Property, Classification,ContainedMetal) %>% top_n(50)
+
+nickelmipp
+
+
+
+
+```
+
+
+
+Let's plot. Grouing PP and MI
+
+```{r}
+
+ggplot(nickelmipp, aes(reorder(Property,ContainedMetal), ContainedMetal, fill=Classification)) +
+  geom_bar(stat="identity", position=position_dodge())+
+  coord_flip()
+ 
+
+
+```
+
+
+Let's focust on MI top 20
+
+```{r}
+
+library(scales)
+
+nickelcountmi2 <- nickelcountmi %>% top_n(20)
+
+ggplot(nickelcountmi2, aes(reorder(Property,ContainedMetal), ContainedMetal)) +
+  geom_bar(stat="identity") +
+  #geom_text(aes(label=ContainedMetal), hjust=-.1)+
+  xlab("Property") + 
+  ylab("Contained Metal in Tonnes") +
+  ggtitle("Nickel Projects and Mines Ranked by Measured and Indicated") +
+  scale_y_continuous(labels=comma)+
+  theme_minimal() +
+  coord_flip()
+
+
+
+
+```
+
+
+Let's map measured and indicated totals by country. 
+
+
+
+
+
